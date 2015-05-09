@@ -31,16 +31,14 @@ main = do
 
   --init bot stuff
   sendPresence def sess
-
   users <- newTVarIO =<< Users.getUsers
-  
 
   --finally, pass off everything to handlers
-  sess2 <- dupSession sess
-  as <- mapM async [Handlers.handleMessages sess2 users]
+  [sess2, sess3] <- replicateM 2 $ dupSession sess
+  as <- mapM async [Handlers.handleMessages sess2 users, Handlers.handlePresences sess3]
 
   forM_ as wait --infinite wait
   where
-    osc = streamConfigurationL . tlsParamsL . clientHooksL . onServerCertificateL
+    osc = streamConfigurationL . tlsParamsL . clientHooksL . onServerCertificateL --All this exists to connect to a server despite it having a bad security certificate like we do.
     clientHooksL = lens TLS.clientHooks (\cp ch -> cp{TLS.clientHooks = ch})
     onServerCertificateL = lens TLS.onServerCertificate (\ch osc -> ch {TLS.onServerCertificate = osc})
