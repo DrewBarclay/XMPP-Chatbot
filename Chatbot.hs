@@ -32,6 +32,7 @@ main = do
   --init bot stuff
   sendPresence def sess
   users <- newTVarIO =<< Users.getUsers
+  setConnectionClosedHandler (\_ s -> reconnect' s >> sendPresence def sess >> return ()) sess
 
   --finally, pass off everything to handlers
   [sess2, sess3] <- replicateM 2 $ dupSession sess
