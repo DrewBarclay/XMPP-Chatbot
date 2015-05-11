@@ -1,4 +1,11 @@
-module Users (User, Users, getUsers) where
+{-# LANGUAGE OverloadedStrings #-}
+
+module Users (
+  User(..), 
+  Users(..), 
+  getUsers,
+  getUser
+) where
 
 import qualified Network.Xmpp as Xmpp
 import qualified Data.Map.Strict as Map
@@ -6,6 +13,8 @@ import System.FilePath
 import System.Directory
 import qualified Config
 import Control.Monad
+import Data.Maybe
+import Data.Text (unpack)
   
 data User = User { jid :: Xmpp.Jid,
                    alias :: String
@@ -25,4 +34,4 @@ usersFile :: IO FilePath
 usersFile = fmap (</> "users.dat") (getAppUserDataDirectory Config.appName)
 
 getUser :: Xmpp.Jid -> Users -> User
-getUser j us = Map.findWithDefault (User { jid = j, alias = show j }) j us           
+getUser j us = Map.findWithDefault (User { jid = Xmpp.toBare j, alias = unpack $ fromMaybe "" (Xmpp.localpart j) }) j us           
