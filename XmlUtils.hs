@@ -4,11 +4,14 @@ module XmlUtils (
   unwrapMessage,
   wrapMessage,
   boldText,
-  text
+  italicsText,
+  newline,
+  text,
+  nodesToString
 ) where
 
 import Data.XML.Types
-import Data.Text (pack, intercalate, toLower)
+import Data.Text (unpack, pack, intercalate, toLower)
 import Prelude hiding (intercalate)
 
 --Based on sample XML sent from Pidgin: [Element {elementName = Name {nameLocalName = "active", nameNamespace = Just "http://jabber.org/protocol/chatstates", namePrefix = Nothing}, elementAttributes = [], elementNodes = []},Element {elementName = Name {nameLocalName = "body", nameNamespace = Just "jabber:client", namePrefix = Nothing}, elementAttributes = [], elementNodes = [NodeContent (ContentText "test")]}]
@@ -40,15 +43,24 @@ wrapMessage ns = [body, htmlBody]
     body = Element {elementName = "body", elementAttributes = [], elementNodes = [NodeContent . ContentText . nodesToText $ ns]}
     htmlBody = Element {elementName = "{http://jabber.org/protocol/xhtml-im}html", elementAttributes = [], elementNodes = [NodeElement $ Element {elementName = "{http://www.w3.org/1999/xhtml}body", elementAttributes = [], elementNodes=ns}]}
 
-    nodeToText (NodeElement e) = nodesToText $ elementNodes e
-    nodeToText (NodeContent (ContentText t)) = t
-    nodeToText _ = ""
-    nodesToText ns = intercalate "" $ map nodeToText ns
+nodeToText (NodeElement e) = nodesToText $ elementNodes e
+nodeToText (NodeContent (ContentText t)) = t
+nodeToText _ = ""
+nodesToText ns = intercalate "" $ map nodeToText ns
 
+nodesToString = unpack . nodesToText
 
 --Generate <strong>text</strong> node
 boldText :: String -> Node
 boldText s = NodeElement $ Element {elementName = "strong", elementAttributes = [], elementNodes = [text s]}
+
+--Generate <em>text</em> node
+italicsText :: String -> Node
+italicsText s = NodeElement $ Element {elementName = "em", elementAttributes = [], elementNodes = [text s]}
+
+--Generates a newline (\n + <br />)
+newline :: Node
+newline = NodeElement $ Element {elementName = "br", elementAttributes = [], elementNodes = [text "\n"]}
 
 --Generate text node
 text :: String -> Node

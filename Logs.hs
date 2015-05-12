@@ -1,16 +1,29 @@
-module Logs (Logs, log, emptyLogs, getLastLogs) where
+module Logs (
+  Logs, 
+  log, 
+  emptyLogs, 
+  getLastLogs) 
+where
 
-import Data.Sequence 
-import Prelude hiding (drop, length)
+import Data.Sequence hiding (replicate)
+import Prelude hiding (drop, length, log)
 import qualified Config
+import Control.Concurrent.STM
+import Data.Foldable
+import Data.XML.Types
 
-type Logs = Seq String
+type Logs = TVar (Seq [Node])
 
-log :: String -> Logs -> Logs
-log m s = drop 1 $ s |> m
+log :: [Node] -> Logs -> IO ()
+log s logs = atomically $ do
+  oldLogs <- readTVar logs
+  let newLogs = drop 1 $ oldLogs |> s
+  writeTVar logs newLogs
 
-emptyLogs :: Logs
-emptyLogs = fromList $ replicate Config.maxLoggedLines ""
+emptyLogs :: IO Logs
+emptyLogs = newTVarIO $ fromList $ replicate Config.maxLoggedLines []
 
-getLastLogs :: Integer -> Logs -> [String]
-getLastLogs n s -> fold . viewl $ drop (length s - n) s
+getLastLogs :: Int -> Logs -> IO [[Node]]
+getLastLogs n logs = atomically $ do
+  s <- readTVar logs
+  return $ foldMap (:[]) . viewl $ drop (length s - n) s

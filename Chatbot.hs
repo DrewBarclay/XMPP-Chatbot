@@ -13,6 +13,8 @@ import qualified Handlers
 import qualified Users
 import Control.Concurrent.Async
 import Control.Concurrent.STM
+import qualified Logs
+import qualified Common
 
 main :: IO ()
 main = do
@@ -26,17 +28,20 @@ main = do
                 (def & tlsUseNameIndicationL .~ True
                  & osc .~ (\_ _ _ _ -> return []))
   sess <- case result of
-              Right s -> return s
-              Left e -> error $ "XmppFailure: " ++ (show e)
+    Right s -> return s
+    Left e -> error $ "XmppFailure: " ++ (show e)
 
   --init bot stuff
   sendPresence def sess
-  users <- newTVarIO =<< Users.getUsers
   setConnectionClosedHandler (\_ s -> reconnect' s >> sendPresence def sess >> return ()) sess
+
+  users <- Users.getUsers
+  logs <- Logs.emptyLogs
+  let bd = Common.BotData {Common.session=sess, Common.users=users, Common.logs=logs}
 
   --finally, pass off everything to handlers
   [sess2, sess3] <- replicateM 2 $ dupSession sess
-  as <- mapM async [Handlers.handleMessages sess2 users, Handlers.handlePresences sess3]
+  as <- mapM async [Handlers.handleMessages (bd {Common.session=sess2}), Handlers.handlePresences sess3]
 
   forM_ as wait --infinite wait
   where
