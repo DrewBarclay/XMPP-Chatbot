@@ -37,8 +37,13 @@ unwrapMessage msg
 wrapMessage :: [Node] -> [Element]
 wrapMessage ns = [body, htmlBody]
   where 
-    body = Element {elementName = "body", elementAttributes = [], elementNodes = [NodeContent . ContentText . intercalate "" $ concatMap nodeText ns]}
+    body = Element {elementName = "body", elementAttributes = [], elementNodes = [NodeContent . ContentText . nodesToText $ ns]}
     htmlBody = Element {elementName = "{http://jabber.org/protocol/xhtml-im}html", elementAttributes = [], elementNodes = [NodeElement $ Element {elementName = "{http://www.w3.org/1999/xhtml}body", elementAttributes = [], elementNodes=ns}]}
+
+    nodeToText (NodeElement e) = nodesToText $ elementNodes e
+    nodeToText (NodeContent (ContentText t)) = t
+    nodeToText _ = ""
+    nodesToText ns = intercalate "" $ map nodeToText ns
 
 
 --Generate <strong>text</strong> node

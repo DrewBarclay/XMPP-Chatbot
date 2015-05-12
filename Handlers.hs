@@ -32,7 +32,7 @@ handleMessages sess users = forever $ do
       forM (items r) (\i -> 
         sendMessage (answer {messageTo = Just $ riJid i}) sess)
 
---The presence handler takes in presences and looks for subscription request. Upon finding one, it subscribes them back
+--The presence handler takes in presences and looks for subscription requests. Upon finding one, it subscribes them back
 --and adds them to the roster.
 handlePresences :: Session -> IO a
 handlePresences sess = forever $ do
