@@ -3,7 +3,9 @@
 module XmlUtils (
   unwrapMessage,
   wrapMessage,
+  boldNode,
   boldText,
+  italicsNode,
   italicsText,
   newline,
   text,
@@ -50,13 +52,21 @@ nodesToText ns = intercalate "" $ map nodeToText ns
 
 nodesToString = unpack . nodesToText
 
+--Generate a <strong> node and give it a children
+boldNode :: [Node] -> Node
+boldNode ns = NodeElement $ Element {elementName = "strong", elementAttributes = [], elementNodes = ns}
+
 --Generate <strong>text</strong> node
 boldText :: String -> Node
-boldText s = NodeElement $ Element {elementName = "strong", elementAttributes = [], elementNodes = [text s]}
+boldText s = boldNode [text s]
+
+--Generate an <em> node and give it children
+italicsNode :: [Node] -> Node
+italicsNode ns = NodeElement $ Element {elementName = "em", elementAttributes = [], elementNodes = ns}
 
 --Generate <em>text</em> node
 italicsText :: String -> Node
-italicsText s = NodeElement $ Element {elementName = "em", elementAttributes = [], elementNodes = [text s]}
+italicsText s = italicsNode [text s]
 
 --Generates a newline (\n + <br />)
 newline :: Node

@@ -4,11 +4,13 @@ module Users (
   User(..), 
   Users(..), 
   getUsers,
-  getUser
+  getUser,
+  setUserAlias
 ) where
 
 import qualified Network.Xmpp as Xmpp
 import qualified Data.Map.Strict as Map
+import System.IO
 import System.FilePath
 import System.Directory
 import qualified Config
@@ -23,6 +25,15 @@ data User = User { jid :: Xmpp.Jid,
 
 type Users = TVar (Map.Map Xmpp.Jid User)
 
+saveUsers :: Users -> IO ()
+saveUsers usT = do
+  dir <- usersDir
+  fp <- usersFile
+  createDirectoryIfMissing True dir
+  h <- openFile fp WriteMode
+  readTVarIO usT >>= hPutStr h . show
+  hClose h
+
 getUsers :: IO Users
 getUsers = do
   fp <- usersFile
@@ -31,8 +42,11 @@ getUsers = do
     True -> readFile fp >>= newTVarIO . read
     False -> newTVarIO Map.empty
  
+usersDir :: IO FilePath
+usersDir = getAppUserDataDirectory Config.appName
+
 usersFile :: IO FilePath
-usersFile = fmap (</> "users.dat") (getAppUserDataDirectory Config.appName)
+usersFile = fmap (</> "users.dat") usersDir
 
 --internal only
 getUserM j us = Map.findWithDefault (User { jid = Xmpp.toBare j, alias = unpack $ fromMaybe "" (Xmpp.localpart j) }) j us  
@@ -43,10 +57,12 @@ getUser j usT = atomically $ do
   return $ getUserM j us    
 
 setUserAlias :: String -> Xmpp.Jid -> Users -> IO ()
-setUserAlias s j usT = atomically $ do
-  us <- readTVar usT
-  let u = getUserM j us
-  let u' = u {alias=s}
-  let us' = Map.insert (Xmpp.toBare j) u' us
-  writeTVar us' usT
-       
+setUserAlias s j usT = do
+  atomically $ do
+    us <- readTVar usT
+    let u = getUserM j us
+    let u' = u {alias=s}
+    let us' = Map.insert (Xmpp.toBare j) u' us
+    writeTVar usT us'
+  saveUsers usT
+         
