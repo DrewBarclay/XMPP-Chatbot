@@ -26,4 +26,4 @@ emptyLogs = newTVarIO $ fromList $ replicate Config.maxLoggedLines []
 getLastLogs :: Int -> Logs -> IO [[Node]]
 getLastLogs n logs = atomically $ do
   s <- readTVar logs
-  return $ foldMap (:[]) . viewl $ drop (length s - n) s
+  return $ foldMap (:[]) . viewl $ drop (length s - min Config.maxLoggedLines n) s

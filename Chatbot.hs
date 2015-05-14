@@ -15,15 +15,25 @@ import Control.Concurrent.Async
 import Control.Concurrent.STM
 import qualified Logs
 import qualified Common
+import System.Environment (getArgs)
+import System.Exit
+import Data.Text (pack)
 
 main :: IO ()
 main = do
-  updateGlobalLogger "Pontarius.Xmpp" $ setLevel DEBUG
+  --updateGlobalLogger "Pontarius.Xmpp" $ setLevel DEBUG
+
+  args <- getArgs
+  if length args /= 3
+    then putStrLn "Usage: ./Chatbot <username> <password> <domain>" >> exitSuccess
+    else return ()
+
+  let [username, password, domain] = args
 
   --connect to the XMPP server
   result <- session
-               "thegoodsirs.net"
-                (Just (\_ -> ( [scramSha1 "bot2" Nothing "password"])
+               domain
+                (Just (\_ -> ( [scramSha1 (pack username) Nothing (pack password)])
                              , Nothing))
                 (def & tlsUseNameIndicationL .~ True
                  & osc .~ (\_ _ _ _ -> return []))

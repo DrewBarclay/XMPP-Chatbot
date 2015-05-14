@@ -14,6 +14,7 @@ import qualified XmlUtils
 import Prelude hiding (log)
 import Control.Monad
 import qualified Data.Map as M
+import Control.Concurrent.STM
 
 data BotData = BotData {session :: Session, users :: Users, logs :: Logs}
 
@@ -21,8 +22,11 @@ sendMessageToAll :: BotData -> [Node] -> IO ()
 sendMessageToAll (BotData {session=sess, logs=ls}) msg = do
   let xmppMsg = message {messageType=Chat, messagePayload=XmlUtils.wrapMessage msg}
   r <- getRoster sess
-  forM (fmap riJid $ M.elems $ items r) (\j -> 
-    sendMessage (xmppMsg {messageTo = Just j}) sess)
+  forM_ (fmap riJid $ M.elems $ items r) (\j -> do
+    av <- atomically $ isPeerAvailable j sess
+    if av 
+      then sendMessage (xmppMsg {messageTo = Just j}) sess
+      else return undefined)
   log msg ls
 
 sendMessageToAllBut :: Jid -> BotData -> [Node] -> IO ()
