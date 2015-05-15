@@ -26,7 +26,7 @@ import qualified Data.Map as M
 
 --The message handler takes in messages and broadcasts them to everyone on the roster.
 handleMessages :: BotData -> IO a
-handleMessages bd@BotData {session=sess, users=us, logs=ls} = forever $ do
+handleMessages bd@BotData {session=sess, users=us, logs=ls, botJid=bj} = forever $ do
   msg <- waitForMessage (\m -> isJust (messageFrom m) && isJust (XmlUtils.unwrapMessage (messagePayload m))) sess
 
   let (Just sender) = fmap toBare $ messageFrom msg
@@ -38,7 +38,7 @@ handleMessages bd@BotData {session=sess, users=us, logs=ls} = forever $ do
   --Check if command
   if head s == '!'
     then parseCommand s sender
-    else sendMessageToAllBut sender bd broadcastMsg
+    else sendMessageToAllBut [sender] bd broadcastMsg
 
   where 
     parseCommand :: String -> Jid -> IO ()
@@ -54,8 +54,8 @@ handleMessages bd@BotData {session=sess, users=us, logs=ls} = forever $ do
         Users.setUserAlias a sender us
         sendMessageToAll bd $ [XmlUtils.italicsNode [XmlUtils.boldText oldAlias, XmlUtils.text " is now known as ", XmlUtils.boldText a, XmlUtils.text "."]]
       Right (List) -> do
-        r <- getRoster sess
-        ls <- forM (fmap riJid $ M.elems $ items r) (\j -> do
+        ps <- atomically $ getAvailablePeers sess
+        ls <- forM (filter (/=bj) ps) (\j -> do
           u <- Users.getUser j us
           return [XmlUtils.boldText (Users.alias u), XmlUtils.text $ " (" ++ Text.unpack (jidToText . toBare $ Users.jid u) ++ ")"])
         sendMessageTo sender bd $ List.intercalate [XmlUtils.newline] $ [XmlUtils.boldText "Users in this chat:"] : ls

@@ -16,25 +16,17 @@ import Control.Monad
 import qualified Data.Map as M
 import Control.Concurrent.STM
 
-data BotData = BotData {session :: Session, users :: Users, logs :: Logs}
+data BotData = BotData {session :: Session, users :: Users, logs :: Logs, botJid :: Jid}
 
 sendMessageToAll :: BotData -> [Node] -> IO ()
-sendMessageToAll (BotData {session=sess, logs=ls}) msg = do
-  let xmppMsg = message {messageType=Chat, messagePayload=XmlUtils.wrapMessage msg}
-  r <- getRoster sess
-  forM_ (fmap riJid $ M.elems $ items r) (\j -> do
-    av <- atomically $ isPeerAvailable j sess
-    if av 
-      then sendMessage (xmppMsg {messageTo = Just j}) sess
-      else return undefined)
-  log msg ls
+sendMessageToAll bd msg = sendMessageToAllBut [] bd msg
 
-sendMessageToAllBut :: Jid -> BotData -> [Node] -> IO ()
-sendMessageToAllBut sender (BotData {session=sess, logs=ls}) msg = do
+sendMessageToAllBut :: [Jid] -> BotData -> [Node] -> IO ()
+sendMessageToAllBut js (BotData {session=sess, logs=ls, botJid=bj}) msg = do
   let xmppMsg = message {messageType=Chat, messagePayload=XmlUtils.wrapMessage msg}
-  r <- getRoster sess
-  forM (filter (/=toBare sender) $ fmap riJid $ M.elems $ items r) (\j -> 
-    sendMessage (xmppMsg {messageTo = Just j}) sess)
+  ps <- atomically $ getAvailablePeers sess
+  let js' = fmap toBare $ bj : js
+  forM (filter (\j -> not $ elem j js') ps) (\j -> sendMessage (xmppMsg {messageTo = Just j}) sess)
   log msg ls
 
 sendMessageTo :: Jid -> BotData -> [Node] -> IO ()

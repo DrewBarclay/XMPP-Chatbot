@@ -18,10 +18,12 @@ import qualified Common
 import System.Environment (getArgs)
 import System.Exit
 import Data.Text (pack)
+import Control.Concurrent (threadDelay)
+import Control.Exception
 
 main :: IO ()
 main = do
-  --updateGlobalLogger "Pontarius.Xmpp" $ setLevel DEBUG
+  updateGlobalLogger "Pontarius.Xmpp" $ setLevel DEBUG
 
   args <- getArgs
   if length args /= 3
@@ -47,7 +49,9 @@ main = do
 
   users <- Users.getUsers
   logs <- Logs.emptyLogs
-  let bd = Common.BotData {Common.session=sess, Common.users=users, Common.logs=logs}
+  let (Just bj) = jidFromTexts (Just $ pack username) (pack domain) Nothing
+  let bd = Common.BotData {Common.session=sess, Common.users=users, Common.logs=logs, Common.botJid=bj}
+
 
   --finally, pass off everything to handlers
   [sess2, sess3] <- replicateM 2 $ dupSession sess
