@@ -7,13 +7,16 @@ module XmlUtils (
   boldText,
   italicsNode,
   italicsText,
+  attribute,
+  emptyName,
+  bareName,
   newline,
   text,
   nodesToString
 ) where
 
 import Data.XML.Types
-import Data.Text (unpack, pack, intercalate, toLower)
+import Data.Text (unpack, pack, intercalate, toLower, Text)
 import Prelude hiding (intercalate)
 
 --Based on sample XML sent from Pidgin: [Element {elementName = Name {nameLocalName = "active", nameNamespace = Just "http://jabber.org/protocol/chatstates", namePrefix = Nothing}, elementAttributes = [], elementNodes = []},Element {elementName = Name {nameLocalName = "body", nameNamespace = Just "jabber:client", namePrefix = Nothing}, elementAttributes = [], elementNodes = [NodeContent (ContentText "test")]}]
@@ -52,9 +55,18 @@ nodesToText ns = intercalate "" $ map nodeToText ns
 
 nodesToString = unpack . nodesToText
 
+emptyName :: Name
+emptyName = Name {nameLocalName = "", nameNamespace = Nothing, namePrefix = Nothing}
+
+bareName :: Text -> Name
+bareName name = emptyName {nameLocalName = name}
+
+attribute :: Text -> Text -> (Name, [Content])
+attribute name value = (emptyName {nameLocalName = name}, [ContentText value])
+
 --Generate a <strong> node and give it a children
 boldNode :: [Node] -> Node
-boldNode ns = NodeElement $ Element {elementName = "strong", elementAttributes = [], elementNodes = ns}
+boldNode ns = NodeElement $ Element {elementName = emptyName {nameLocalName = "span"}, elementAttributes = [attribute "style" "font-weight: bold"], elementNodes = ns}
 
 --Generate <strong>text</strong> node
 boldText :: String -> Node
@@ -62,7 +74,7 @@ boldText s = boldNode [text s]
 
 --Generate an <em> node and give it children
 italicsNode :: [Node] -> Node
-italicsNode ns = NodeElement $ Element {elementName = "em", elementAttributes = [], elementNodes = ns}
+italicsNode ns = NodeElement $ Element {elementName = bareName "em", elementAttributes = [], elementNodes = ns}
 
 --Generate <em>text</em> node
 italicsText :: String -> Node
@@ -70,7 +82,7 @@ italicsText s = italicsNode [text s]
 
 --Generates a newline (\n + <br />)
 newline :: Node
-newline = NodeElement $ Element {elementName = "br", elementAttributes = [], elementNodes = [text "\n"]}
+newline = NodeElement $ Element {elementName = bareName "br", elementAttributes = [], elementNodes = [text "\n"]}
 
 --Generate text node
 text :: String -> Node
