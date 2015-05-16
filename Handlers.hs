@@ -74,16 +74,18 @@ data BotCommand = GetLogs Int | Help | Ping | Alias String | List
   
 --The presence handler takes in presences and looks for subscription requests. Upon finding one, it subscribes them back
 --and adds them to the roster.
-handlePresences :: Session -> IO a
-handlePresences sess = forever $ do
+handlePresences :: BotData -> IO a
+handlePresences bd@BotData{session=sess} = forever $ do
   pres <- waitForPresence (\p -> isJust (presenceFrom p)) sess --only deal with presences who have a 'from'
   let Just sender = presenceFrom pres
   case presenceType pres of
     Subscribe -> do
       sendPresence (presenceSubscribe sender) sess --subscribe in turn, server handles roster
       sendPresence (presenceSubscribed sender) sess
+      sendMessageTo sender bd $ [XmlUtils.italicsText "You have subscribed to the bot. In order to receive messages, you must accept the subscription request sent to you. If you accidentally decline, unsubscribe from this bot and then resubscribe."]
     Unsubscribe -> do
       sendPresence (presenceUnsubscribe sender) sess --unsub in turn, server handles roster
       sendPresence (presenceUnsubscribed sender) sess
+      return ()
     _ -> do
       return undefined

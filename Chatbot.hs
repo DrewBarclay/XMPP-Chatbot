@@ -55,7 +55,7 @@ main = do
 
   --finally, pass off everything to handlers
   [sess2, sess3] <- replicateM 2 $ dupSession sess
-  as <- mapM async [Handlers.handleMessages (bd {Common.session=sess2}), Handlers.handlePresences sess3]
+  as <- mapM async [Handlers.handleMessages (bd {Common.session=sess2}), Handlers.handlePresences (bd {Common.session=sess3})]
 
   forM_ as wait --infinite wait
   where

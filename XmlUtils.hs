@@ -56,7 +56,7 @@ nodesToText ns = intercalate "" $ map nodeToText ns
 nodesToString = unpack . nodesToText
 
 emptyName :: Name
-emptyName = Name {nameLocalName = "", nameNamespace = Nothing, namePrefix = Nothing}
+emptyName = Name {nameLocalName = "", nameNamespace = Just "http://www.w3.org/1999/xhtml", namePrefix = Nothing}
 
 bareName :: Text -> Name
 bareName name = emptyName {nameLocalName = name}
@@ -66,7 +66,7 @@ attribute name value = (emptyName {nameLocalName = name}, [ContentText value])
 
 --Generate a <strong> node and give it a children
 boldNode :: [Node] -> Node
-boldNode ns = NodeElement $ Element {elementName = emptyName {nameLocalName = "span"}, elementAttributes = [attribute "style" "font-weight: bold"], elementNodes = ns}
+boldNode ns = NodeElement $ Element {elementName = bareName "span", elementAttributes = [attribute "style" "font-weight: bold"], elementNodes = ns}
 
 --Generate <strong>text</strong> node
 boldText :: String -> Node
