@@ -62,7 +62,7 @@ bareName :: Text -> Name
 bareName name = emptyName {nameLocalName = name}
 
 attribute :: Text -> Text -> (Name, [Content])
-attribute name value = (emptyName {nameLocalName = name}, [ContentText value])
+attribute name value = (emptyName {nameLocalName = name, nameNamespace = Nothing}, [ContentText value])
 
 --Generate a <strong> node and give it a children
 boldNode :: [Node] -> Node
