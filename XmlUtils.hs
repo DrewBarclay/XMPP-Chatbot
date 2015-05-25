@@ -18,6 +18,9 @@ module XmlUtils (
 import Data.XML.Types
 import Data.Text (unpack, pack, intercalate, toLower, Text)
 import Prelude hiding (intercalate)
+import Data.Text.Lazy.Builder (fromText, toLazyText)
+import Data.Text.Lazy (toStrict)
+import Data.Monoid (mconcat)
 
 --Based on sample XML sent from Pidgin: [Element {elementName = Name {nameLocalName = "active", nameNamespace = Just "http://jabber.org/protocol/chatstates", namePrefix = Nothing}, elementAttributes = [], elementNodes = []},Element {elementName = Name {nameLocalName = "body", nameNamespace = Just "jabber:client", namePrefix = Nothing}, elementAttributes = [], elementNodes = [NodeContent (ContentText "test")]}]
 
@@ -45,15 +48,15 @@ unwrapMessage msg
 wrapMessage :: [Node] -> [Element]
 wrapMessage ns = [body, htmlBody]
   where 
-    body = Element {elementName = "body", elementAttributes = [], elementNodes = [NodeContent . ContentText . nodesToText $ ns]}
+    body = Element {elementName = "body", elementAttributes = [], elementNodes = [NodeContent . ContentText . toStrict . toLazyText $ nodesToText ns]}
     htmlBody = Element {elementName = "{http://jabber.org/protocol/xhtml-im}html", elementAttributes = [], elementNodes = [NodeElement $ Element {elementName = "{http://www.w3.org/1999/xhtml}body", elementAttributes = [], elementNodes=ns}]}
 
 nodeToText (NodeElement e) = nodesToText $ elementNodes e
-nodeToText (NodeContent (ContentText t)) = t
-nodeToText _ = ""
-nodesToText ns = intercalate "" $ map nodeToText ns
+nodeToText (NodeContent (ContentText t)) = fromText t
+nodeToText _ = fromText ""
+nodesToText ns = mconcat $ map nodeToText ns
 
-nodesToString = unpack . nodesToText
+nodesToString = unpack . toStrict . toLazyText . nodesToText
 
 emptyName :: Name
 emptyName = Name {nameLocalName = "", nameNamespace = Just "http://www.w3.org/1999/xhtml", namePrefix = Nothing}
