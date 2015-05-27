@@ -73,7 +73,7 @@ handleMessages bd@BotData {session=sess, users=us, logs=ls, botJid=bj} = forever
        <|> (string "ping" >> return Ping)
        <|> (string "alias" >> takeWhile isSpace >> takeWhile (const True) >>= return . Alias . Text.unpack)
        <|> (string "list" >> return List)
-       <|> (string "roll" >> takeWhile isSpace >> decimal >>= \d1 -> string "d" >> decimal >>= \d2 -> return $ Roll d1 d2)
+       <|> (string "roll" >> takeWhile isSpace >> decimal >>= \d1 -> string "d" >> decimal >>= \d2 -> return $ Roll (min 100 d1) (min 10000 d2))
       
 data BotCommand = GetLogs Int | Help | Ping | Alias String | List | Roll Int Int
   
