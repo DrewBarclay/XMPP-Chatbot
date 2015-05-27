@@ -23,6 +23,7 @@ import qualified Data.List as List
 import Control.Applicative
 import Prelude hiding (takeWhile)
 import qualified Data.Map as M
+import System.Random
 
 --The message handler takes in messages and broadcasts them to everyone on the roster.
 handleMessages :: BotData -> IO a
@@ -44,7 +45,7 @@ handleMessages bd@BotData {session=sess, users=us, logs=ls, botJid=bj} = forever
     parseCommand :: String -> Jid -> IO ()
     parseCommand s sender = case parseOnly parser (Text.pack s) of
       Left e -> sendMessageTo sender bd $ [XmlUtils.italicsText $ "Incorrect command syntax."]
-      Right Help -> sendMessageTo sender bd $ [XmlUtils.italicsText "This bot is here to help! Commands: help, log <number>, ping, alias <name>, list"]
+      Right Help -> sendMessageTo sender bd $ [XmlUtils.italicsText "This bot is here to help! Commands: roll <num>d<num>, help, log <number>, ping, alias <name>, list"]
       Right (GetLogs i) -> do
         lastLogs <- getLastLogs i ls 
         sendMessageTo sender bd $ List.intercalate [XmlUtils.newline] $ [XmlUtils.boldText "Last logs:"] : lastLogs
@@ -59,8 +60,11 @@ handleMessages bd@BotData {session=sess, users=us, logs=ls, botJid=bj} = forever
           u <- Users.getUser j us
           return [XmlUtils.boldText (Users.alias u), XmlUtils.text $ " (" ++ Text.unpack (jidToText . toBare $ Users.jid u) ++ ")"])
         sendMessageTo sender bd $ List.intercalate [XmlUtils.newline] $ [XmlUtils.boldText "Users in this chat:"] : ls
+      Right (Roll numDice numSides) -> do     
+        rolls <- replicateM numDice $ randomRIO (1, numSides)
+        alias <- fmap Users.alias $ Users.getUser sender us
+        sendMessageToAll bd $ [XmlUtils.italicsNode [XmlUtils.boldText alias, XmlUtils.text (" rolls " ++ show numDice ++ "d" ++ show numSides ++ ". "), XmlUtils.boldText "Result: ", XmlUtils.text (show rolls)]]
  
-        
     parser :: Parser BotCommand
     parser = do
       char '!'
@@ -69,8 +73,9 @@ handleMessages bd@BotData {session=sess, users=us, logs=ls, botJid=bj} = forever
        <|> (string "ping" >> return Ping)
        <|> (string "alias" >> takeWhile isSpace >> takeWhile (const True) >>= return . Alias . Text.unpack)
        <|> (string "list" >> return List)
+       <|> (string "roll" >> takeWhile isSpace >> decimal >>= \d1 -> string "d" >> decimal >>= \d2 -> return $ Roll d1 d2)
       
-data BotCommand = GetLogs Int | Help | Ping | Alias String | List
+data BotCommand = GetLogs Int | Help | Ping | Alias String | List | Roll Int Int
   
 --The presence handler takes in presences and looks for subscription requests. Upon finding one, it subscribes them back
 --and adds them to the roster.
