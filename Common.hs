@@ -8,7 +8,7 @@ module Common (
 import Network.Xmpp hiding (session)
 import Network.Xmpp.IM
 import Users
-import Logs
+import Logs 
 import Data.XML.Types
 import qualified XmlUtils
 import Prelude hiding (log)
@@ -34,4 +34,3 @@ sendMessageTo sendee (BotData {session=sess}) msg = do
   let xmppMsg = message {messageType=Chat, messageTo=Just sendee, messagePayload=XmlUtils.wrapMessage msg}
   sendMessage xmppMsg sess
   return ()
-

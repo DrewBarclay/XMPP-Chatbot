@@ -2,7 +2,10 @@ module Logs (
   Logs, 
   log, 
   emptyLogs, 
-  getLastLogs) 
+  getLastLogs,
+  getSavedLogs,
+  saveLogs
+) 
 where
 
 import Data.Sequence hiding (replicate)
@@ -11,6 +14,10 @@ import qualified Config
 import Control.Concurrent.STM
 import Data.Foldable
 import Data.XML.Types
+import System.IO
+import System.FilePath
+import System.Directory
+import Instances
 
 type Logs = TVar (Seq [Node])
 
@@ -27,3 +34,23 @@ getLastLogs :: Int -> Logs -> IO [[Node]]
 getLastLogs n logs = atomically $ do
   s <- readTVar logs
   return $ foldMap (:[]) . viewl $ drop (length s - min Config.maxLoggedLines n) s
+
+saveLogs :: Logs -> IO ()
+saveLogs logs = do
+  dir <- Config.appDir
+  fp <- logsFile
+  createDirectoryIfMissing True dir
+  h <- openFile fp WriteMode
+  readTVarIO logs >>= hPutStr h . show
+  hClose h
+
+getSavedLogs :: IO Logs
+getSavedLogs = do
+  fp <- logsFile
+  exists <- doesFileExist fp
+  case exists of
+    True -> readFile fp >>= newTVarIO . read
+    False -> emptyLogs
+
+logsFile :: IO FilePath
+logsFile = fmap (</> "logs.dat") Config.appDir

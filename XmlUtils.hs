@@ -12,11 +12,13 @@ module XmlUtils (
   bareName,
   newline,
   text,
-  nodesToString
+  nodesToString,
+  mapNodeText,
+  mapElementText
 ) where
 
 import Data.XML.Types
-import Data.Text (unpack, pack, intercalate, toLower, Text)
+import Data.Text (unpack, pack, intercalate, toLower, Text, replace)
 import Prelude hiding (intercalate)
 import Data.Text.Lazy.Builder (fromText, toLazyText)
 import Data.Text.Lazy (toStrict)
@@ -45,6 +47,7 @@ unwrapMessage msg
     body = elementNodes $ head bodyList
 
 --Take a message, generates plain text <body> and html <body> [Element] for payload.
+--Current hacky workaround for Pidgin: < and > are replaced with the suceeds/precedes unicode symbols in plaintext body.
 wrapMessage :: [Node] -> [Element]
 wrapMessage ns = [body, htmlBody]
   where 
@@ -57,6 +60,13 @@ nodeToText _ = fromText ""
 nodesToText ns = mconcat $ map nodeToText ns
 
 nodesToString = unpack . toStrict . toLazyText . nodesToText
+
+mapNodeText :: (Text -> Text) -> Node -> Node
+mapNodeText f (NodeElement e) = NodeElement (mapElementText f e)
+mapNodeText f (NodeContent (ContentText t)) = NodeContent (ContentText $ f t)
+mapNodeText _ n = n
+
+mapElementText f e = e {elementNodes=map (mapNodeText f) (elementNodes e)}
 
 emptyName :: Name
 emptyName = Name {nameLocalName = "", nameNamespace = Just "http://www.w3.org/1999/xhtml", namePrefix = Nothing}

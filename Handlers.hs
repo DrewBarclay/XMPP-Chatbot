@@ -2,7 +2,8 @@
 
 module Handlers (
   handleMessages,
-  handlePresences
+  handlePresences,
+  handleExit
 ) where
 
 import Network.Xmpp hiding (session)
@@ -24,14 +25,19 @@ import Control.Applicative
 import Prelude hiding (takeWhile)
 import qualified Data.Map as M
 import System.Random
+import Control.Concurrent
+import qualified Control.Exception as E
+import System.Posix.Signals
+import System.Exit
 
 --The message handler takes in messages and broadcasts them to everyone on the roster.
 handleMessages :: BotData -> IO a
 handleMessages bd@BotData {session=sess, users=us, logs=ls, botJid=bj} = forever $ do
   msg <- waitForMessage (\m -> isJust (messageFrom m) && isJust (XmlUtils.unwrapMessage (messagePayload m))) sess
 
+  let filterText = Text.replace "<" "≺"
   let (Just sender) = fmap toBare $ messageFrom msg
-  let (Just payload) = XmlUtils.unwrapMessage (messagePayload msg)
+  let (Just payload) = fmap (fmap $ XmlUtils.mapNodeText filterText) $ XmlUtils.unwrapMessage (messagePayload msg)
   let s = XmlUtils.nodesToString payload
   alias <- fmap Users.alias $ Users.getUser sender us
   let broadcastMsg = XmlUtils.boldText alias : XmlUtils.text ": " : payload
@@ -94,3 +100,8 @@ handlePresences bd@BotData{session=sess} = forever $ do
       return ()
     _ -> do
       return undefined
+
+handleExit :: ThreadId -> Logs -> IO ()
+handleExit tid logs = do
+  saveLogs logs
+  E.throwTo tid ExitSuccess

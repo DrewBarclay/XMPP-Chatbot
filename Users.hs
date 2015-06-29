@@ -27,7 +27,7 @@ type Users = TVar (Map.Map Xmpp.Jid User)
 
 saveUsers :: Users -> IO ()
 saveUsers usT = do
-  dir <- usersDir
+  dir <- Config.appDir
   fp <- usersFile
   createDirectoryIfMissing True dir
   h <- openFile fp WriteMode
@@ -41,12 +41,9 @@ getUsers = do
   case exists of
     True -> readFile fp >>= newTVarIO . read
     False -> newTVarIO Map.empty
- 
-usersDir :: IO FilePath
-usersDir = getAppUserDataDirectory Config.appName
 
 usersFile :: IO FilePath
-usersFile = fmap (</> "users.dat") usersDir
+usersFile = fmap (</> "users.dat") Config.appDir
 
 --internal only
 getUserM j us = Map.findWithDefault (User { jid = Xmpp.toBare j, alias = unpack $ fromMaybe "" (Xmpp.localpart j) }) j us  

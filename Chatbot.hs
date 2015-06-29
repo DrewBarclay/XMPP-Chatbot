@@ -18,12 +18,13 @@ import qualified Common
 import System.Environment (getArgs)
 import System.Exit
 import Data.Text (pack)
-import Control.Concurrent (threadDelay)
+import Control.Concurrent (threadDelay, myThreadId)
 import Control.Exception
+import System.Posix.Signals (installHandler, Handler(Catch), sigINT, sigTERM)
 
 main :: IO ()
 main = do
-  updateGlobalLogger "Pontarius.Xmpp" $ setLevel DEBUG
+  --updateGlobalLogger "Pontarius.Xmpp" $ setLevel DEBUG
 
   args <- getArgs
   if length args /= 3
@@ -48,14 +49,19 @@ main = do
   setConnectionClosedHandler (\_ s -> reconnect' s >> sendPresence def sess >> return ()) sess
 
   users <- Users.getUsers
-  logs <- Logs.emptyLogs
+  logs <- Logs.getSavedLogs
   let (Just bj) = jidFromTexts (Just $ pack username) (pack domain) Nothing
   let bd = Common.BotData {Common.session=sess, Common.users=users, Common.logs=logs, Common.botJid=bj}
 
 
   --finally, pass off everything to handlers
-  [sess2, sess3] <- replicateM 2 $ dupSession sess
-  as <- mapM async [Handlers.handleMessages (bd {Common.session=sess2}), Handlers.handlePresences (bd {Common.session=sess3})]
+  tid <- myThreadId
+  installHandler sigINT (Catch $ Handlers.handleExit tid logs) Nothing --this kills the cross-platform compatibility.
+  installHandler sigTERM (Catch $ Handlers.handleExit tid logs) Nothing
+
+  let hs = [Handlers.handleMessages, Handlers.handlePresences]
+  ss <- replicateM (length hs) $ dupSession sess
+  as <- mapM async $ zipWith (\h s -> h $ bd {Common.session=s}) hs ss
 
   forM_ as wait --infinite wait
   where
