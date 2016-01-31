@@ -34,13 +34,15 @@ import System.Exit
 handleMessages :: BotData -> IO a
 handleMessages bd@BotData {session=sess, users=us, logs=ls, botJid=bj} = forever $ do
   msg <- waitForMessage (\m -> isJust (messageFrom m) && isJust (XmlUtils.unwrapMessage (messagePayload m))) sess
-
+  
   let filterText = Text.replace "<" "≺"
   let (Just sender) = fmap toBare $ messageFrom msg
   let (Just payload) = fmap (fmap $ XmlUtils.mapNodeText filterText) $ XmlUtils.unwrapMessage (messagePayload msg)
   let s = XmlUtils.nodesToString payload
   alias <- fmap Users.alias $ Users.getUser sender us
   let broadcastMsg = XmlUtils.boldText alias : XmlUtils.text ": " : payload
+
+  putStrLn (show broadcastMsg)
 
   --Check if command
   if head s == '!'

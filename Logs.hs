@@ -18,6 +18,7 @@ import System.IO
 import System.FilePath
 import System.Directory
 import Instances
+import Control.DeepSeq
 
 type Logs = TVar (Seq [Node])
 
@@ -25,7 +26,7 @@ log :: [Node] -> Logs -> IO ()
 log s logs = atomically $ do
   oldLogs <- readTVar logs
   let newLogs = drop 1 $ oldLogs |> s
-  writeTVar logs newLogs
+  newLogs `deepseq` writeTVar logs newLogs
 
 emptyLogs :: IO Logs
 emptyLogs = newTVarIO $ fromList $ replicate Config.maxLoggedLines []

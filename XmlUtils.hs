@@ -26,7 +26,7 @@ import Data.Monoid (mconcat)
 
 --Based on sample XML sent from Pidgin: [Element {elementName = Name {nameLocalName = "active", nameNamespace = Just "http://jabber.org/protocol/chatstates", namePrefix = Nothing}, elementAttributes = [], elementNodes = []},Element {elementName = Name {nameLocalName = "body", nameNamespace = Just "jabber:client", namePrefix = Nothing}, elementAttributes = [], elementNodes = [NodeContent (ContentText "test")]}]
 
---HTML XML: <message from='moogle@thegoodsirs.net/774002734143179800787955' to='bot2@thegoodsirs.net' type='chat' id='purple688c8bdf'><active xmlns='http://jabber.org/protocol/chatstates'/><body>italics</body><html xmlns='http://jabber.org/protocol/xhtml-im'><body xmlns='http://www.w3.org/1999/xhtml'><p><em>italics</em></p></body></html></message>
+--HTML XML: <message from='jid@site.net' to='jid2@site.net' type='chat' id='purple688c8bdf'><active xmlns='http://jabber.org/protocol/chatstates'/><body>italics</body><html xmlns='http://jabber.org/protocol/xhtml-im'><body xmlns='http://www.w3.org/1999/xhtml'><p><em>italic text</em></p></body></html></message>
 
 --Take the payload of a message, and return the html body if possible; the regular body if not; and Nothing if it is not possible.
 unwrapMessage :: [Element] -> Maybe [Node]
