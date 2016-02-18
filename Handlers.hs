@@ -42,7 +42,7 @@ handleMessages bd@BotData {session=sess, users=us, logs=ls, botJid=bj} = forever
   alias <- fmap Users.alias $ Users.getUser sender us
   let broadcastMsg = XmlUtils.boldText alias : XmlUtils.text ": " : payload
 
-  putStrLn (show payload)
+  --putStrLn (show payload)
 
   --Check if command
   if head s == '!'
