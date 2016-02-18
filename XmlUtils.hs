@@ -18,8 +18,9 @@ module XmlUtils (
 ) where
 
 import Data.XML.Types
-import Data.Text (unpack, pack, intercalate, toLower, Text, replace)
+import Data.Text (unpack, pack, intercalate, toLower, Text, replace, splitOn)
 import Prelude hiding (intercalate)
+import qualified Data.List as L (intercalate)
 import Data.Text.Lazy.Builder (fromText, toLazyText)
 import Data.Text.Lazy (toStrict)
 import Data.Monoid (mconcat)
@@ -32,7 +33,7 @@ import Data.Monoid (mconcat)
 unwrapMessage :: [Element] -> Maybe [Node]
 unwrapMessage msg
   | hasHtml = Just htmlBody
-  | hasBody = Just body
+  | hasBody && (length body > 0) = Just body
   | otherwise = Nothing
   where
     htmlList = filter (\e -> toLower (nameLocalName . elementName $ e) == "html") msg
@@ -43,8 +44,14 @@ unwrapMessage msg
     hasHtml = not (null htmlList) && not (null htmlBodyList)
 
     bodyList = filter (\e -> toLower (nameLocalName . elementName $ e) == "body") msg
+    body = fixBody (elementNodes $ head bodyList)
     hasBody = not $ null bodyList
-    body = elementNodes $ head bodyList
+
+    fixBody wholeBody@([NodeContent (ContentText innerBody)]) = fixedBody
+      where
+        splitMsg = fmap (\t -> [NodeContent (ContentText t)]) $ splitOn "\n" innerBody
+        fixedBody = L.intercalate [newline] splitMsg --newline is a <br/> with \n inside
+    fixBody _ = []
 
 --Take a message, generates plain text <body> and html <body> [Element] for payload.
 --Current hacky workaround for Pidgin: < and > are replaced with the suceeds/precedes unicode symbols in plaintext body.
