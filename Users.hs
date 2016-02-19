@@ -5,7 +5,7 @@ module Users (
   Users(..), 
   getUsers,
   getUser,
-  setUserAlias
+  setUser
 ) where
 
 import qualified Network.Xmpp as Xmpp
@@ -18,9 +18,11 @@ import Control.Monad
 import Data.Maybe
 import Data.Text (unpack)
 import Control.Concurrent.STM
+import Text.Read (readMaybe)
   
 data User = User { jid :: Xmpp.Jid,
-                   alias :: String
+                   alias :: String,
+                   multicast :: Bool
                  } deriving (Show, Read)
 
 type Users = TVar (Map.Map Xmpp.Jid User)
@@ -39,27 +41,27 @@ getUsers = do
   fp <- usersFile
   exists <- doesFileExist fp
   case exists of
-    True -> readFile fp >>= newTVarIO . read
+    True -> do
+      parsedUsers <- fmap readMaybe (readFile fp)
+      case parsedUsers of
+        Just us -> newTVarIO us
+        Nothing -> newTVarIO Map.empty
     False -> newTVarIO Map.empty
 
 usersFile :: IO FilePath
 usersFile = fmap (</> "users.dat") Config.appDir
 
 --internal only
-getUserM j us = Map.findWithDefault (User { jid = Xmpp.toBare j, alias = unpack $ fromMaybe "" (Xmpp.localpart j) }) (Xmpp.toBare j) us  
+getUserM j us = Map.findWithDefault (User { jid = Xmpp.toBare j, alias = unpack $ fromMaybe "" (Xmpp.localpart j), multicast = True }) (Xmpp.toBare j) us  
 
 getUser :: Xmpp.Jid -> Users -> IO User
 getUser j usT = atomically $ do
   us <- readTVar usT
-  return $ getUserM j us    
+  return $ getUserM j us 
 
-setUserAlias :: String -> Xmpp.Jid -> Users -> IO ()
-setUserAlias s j usT = do
-  atomically $ do
-    us <- readTVar usT
-    let u = getUserM j us
-    let u' = u {alias=s}
-    let us' = Map.insert (Xmpp.toBare j) u' us
-    writeTVar usT us'
-  saveUsers usT
+setUser :: User -> Users -> IO ()
+setUser u usT = atomically $ do
+  us <- readTVar usT
+  let us' = Map.insert (jid u) u us
+  writeTVar usT us'  
          

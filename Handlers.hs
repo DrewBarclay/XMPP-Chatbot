@@ -53,15 +53,20 @@ handleMessages bd@BotData {session=sess, users=us, logs=ls, botJid=bj} = forever
     parseCommand :: String -> Jid -> IO ()
     parseCommand s sender = case parseOnly parser (Text.pack s) of
       Left e -> sendMessageTo sender bd $ [XmlUtils.italicsText $ "Incorrect command syntax."]
-      Right Help -> sendMessageTo sender bd $ [XmlUtils.italicsText "This bot is here to help! Commands: roll <num>d<num>, help, log <number>, ping, alias <name>, list"]
+      Right Help -> sendMessageTo sender bd $ [XmlUtils.italicsText "This bot is here to help! Commands: roll <num>d<num>, help, log <number>, ping, alias <name>, list, multicast"]
       Right (GetLogs i) -> do
         lastLogs <- getLastLogs i ls 
         sendMessageTo sender bd $ List.intercalate [XmlUtils.newline] $ [XmlUtils.boldText "Last logs:"] : lastLogs
       Right Ping -> sendMessageTo sender bd $ [XmlUtils.italicsText "PONG!"] 
       Right (Alias a) -> do
-        oldAlias <- fmap Users.alias $ Users.getUser sender us
-        Users.setUserAlias a sender us
-        sendMessageToAll bd $ [XmlUtils.italicsNode [XmlUtils.boldText oldAlias, XmlUtils.text " is now known as ", XmlUtils.boldText a, XmlUtils.text "."]]
+        if length a > 0
+          then do
+            u <- Users.getUser sender us
+            let oldAlias = Users.alias u
+            let u' = u {Users.alias = a}
+            Users.setUser u' us
+            sendMessageToAll bd $ [XmlUtils.italicsNode [XmlUtils.boldText oldAlias, XmlUtils.text " is now known as ", XmlUtils.boldText a, XmlUtils.text "."]]
+          else sendMessageTo sender bd $ [XmlUtils.italicsText "Error: You must enter an alias."]
       Right (List) -> do
         ps <- atomically $ getAvailablePeers sess
         ls <- forM (filter (/=bj) ps) (\j -> do
@@ -72,6 +77,12 @@ handleMessages bd@BotData {session=sess, users=us, logs=ls, botJid=bj} = forever
         rolls <- replicateM numDice $ randomRIO (1, numSides)
         alias <- fmap Users.alias $ Users.getUser sender us
         sendMessageToAll bd $ [XmlUtils.italicsNode [XmlUtils.boldText alias, XmlUtils.text (" rolls " ++ show numDice ++ "d" ++ show numSides ++ ". "), XmlUtils.boldText "Result: ", XmlUtils.text (show rolls)]]
+      Right (Multicast) -> do
+        u <- Users.getUser sender us
+        let m = not $ Users.multicast u
+        let u' = u {Users.multicast = m}
+        Users.setUser u' us
+        sendMessageTo sender bd $ [XmlUtils.italicsText "Your multicast is now toggled to ", XmlUtils.boldText (show m), XmlUtils.italicsText "."]
  
     parser :: Parser BotCommand
     parser = do
@@ -82,8 +93,9 @@ handleMessages bd@BotData {session=sess, users=us, logs=ls, botJid=bj} = forever
        <|> (string "alias" >> takeWhile isSpace >> takeWhile (const True) >>= return . Alias . Text.unpack)
        <|> (string "list" >> return List)
        <|> (string "roll" >> takeWhile isSpace >> decimal >>= \d1 -> string "d" >> decimal >>= \d2 -> return $ Roll (min 100 d1) (min 10000 d2))
+       <|> (string "multicast" >> return Multicast)
       
-data BotCommand = GetLogs Int | Help | Ping | Alias String | List | Roll Int Int
+data BotCommand = GetLogs Int | Help | Ping | Alias String | List | Roll Int Int | Multicast
   
 --The presence handler takes in presences and looks for subscription requests. Upon finding one, it subscribes them back
 --and adds them to the roster.

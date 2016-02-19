@@ -22,11 +22,16 @@ sendMessageToAll :: BotData -> [Node] -> IO ()
 sendMessageToAll bd msg = sendMessageToAllBut [] bd msg
 
 sendMessageToAllBut :: [Jid] -> BotData -> [Node] -> IO ()
-sendMessageToAllBut js (BotData {session=sess, logs=ls, botJid=bj}) msg = do
+sendMessageToAllBut js (BotData {session=sess, logs=ls, botJid=bj, users=us}) msg = do
   let js' = fmap toBare $ bj : js --list of people not to send to
   let xmppMsg = message {messageType=Chat, messagePayload=XmlUtils.wrapMessage msg}
   ps <- atomically $ getAvailablePeers sess
-  psWithStatus <- forM ps (\j -> atomically $ getPeerEntities j sess) --get jids with resources 
+  psWithStatus <- forM ps (\j -> do
+    u <- getUser j us
+    if multicast u
+      then atomically $ getPeerEntities j sess
+      else return $ M.fromList [(j, Nothing)]
+    ) --get jids with resources 
   let ps = concat $ fmap M.keys psWithStatus
   forM (filter (\j -> not $ elem (toBare j) js') ps) (\j -> sendMessage (xmppMsg {messageTo = Just j}) sess)
   log msg ls
