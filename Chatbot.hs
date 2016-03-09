@@ -55,15 +55,21 @@ main = do
 
 
   --finally, pass off everything to handlers
-  tid <- myThreadId
-  installHandler sigINT (Catch $ Handlers.handleExit tid logs) Nothing --this kills the cross-platform compatibility.
-  installHandler sigTERM (Catch $ Handlers.handleExit tid logs) Nothing
 
-  let hs = [Handlers.handleMessages, Handlers.handlePresences]
-  ss <- replicateM (length hs) $ dupSession sess
-  as <- mapM async $ zipWith (\h s -> h $ bd {Common.session=s}) hs ss
+  (do
+    tid <- myThreadId
+    installHandler sigINT (Catch $ Handlers.handleExit tid logs) Nothing --this kills the cross-platform compatibility.
+    installHandler sigTERM (Catch $ Handlers.handleExit tid logs) Nothing
+    let hs = [Handlers.handleMessages, Handlers.handlePresences]
+    ss <- replicateM (length hs) $ dupSession sess
+    as <- mapM async $ zipWith (\h s -> h $ bd {Common.session=s}) hs ss
+    forM_ as wait
+   ) `finally` (do
+    Logs.saveLogs logs
+    Users.saveUsers users
+    putStrLn "Logs and users saved, exiting."
+   )
 
-  forM_ as wait --infinite wait
   where
     osc = streamConfigurationL . tlsParamsL . clientHooksL . onServerCertificateL --All this exists to connect to a server despite it having a bad security certificate like we do.
     clientHooksL = lens TLS.clientHooks (\cp ch -> cp{TLS.clientHooks = ch})

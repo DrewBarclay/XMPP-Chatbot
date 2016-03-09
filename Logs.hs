@@ -50,7 +50,9 @@ getSavedLogs = do
   fp <- logsFile
   exists <- doesFileExist fp
   case exists of
-    True -> readFile fp >>= newTVarIO . read
+    True -> do
+      s <- readFile fp
+      s `deepseq` (newTVarIO . read $ s)
     False -> emptyLogs
 
 logsFile :: IO FilePath

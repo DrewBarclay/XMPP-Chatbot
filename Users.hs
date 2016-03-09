@@ -2,7 +2,8 @@
 
 module Users (
   User(..), 
-  Users(..), 
+  Users(..),
+  saveUsers, 
   getUsers,
   getUser,
   setUser
@@ -19,6 +20,7 @@ import Data.Maybe
 import Data.Text (unpack)
 import Control.Concurrent.STM
 import Text.Read (readMaybe)
+import Control.DeepSeq
   
 data User = User { jid :: Xmpp.Jid,
                    alias :: String,
@@ -26,6 +28,7 @@ data User = User { jid :: Xmpp.Jid,
                  } deriving (Show, Read)
 
 type Users = TVar (Map.Map Xmpp.Jid User)
+
 
 saveUsers :: Users -> IO ()
 saveUsers usT = do
@@ -42,7 +45,8 @@ getUsers = do
   exists <- doesFileExist fp
   case exists of
     True -> do
-      parsedUsers <- fmap readMaybe (readFile fp)
+      s <- readFile fp
+      let parsedUsers = s `deepseq` (readMaybe s)
       case parsedUsers of
         Just us -> newTVarIO us
         Nothing -> newTVarIO Map.empty
