@@ -17,3 +17,5 @@ cabal.sandbox.config
 Chatbot
 *.hs~
 .gitignore~
+.stack-work/
+*.*~

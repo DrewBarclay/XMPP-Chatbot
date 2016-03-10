@@ -1,0 +1,11 @@
+flags: {}
+extra-package-dbs: []
+packages:
+- '.'
+extra-deps:
+- pontarius-xmpp-0.5.1
+- strict-io-0.1
+- stringprep-1.0.0
+- text-1.2.2.0
+- xml-picklers-0.3.6
+resolver: lts-5.6
