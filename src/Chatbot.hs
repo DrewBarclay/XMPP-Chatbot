@@ -61,8 +61,8 @@ main = do
     installHandler sigINT (Catch $ Handlers.handleExit tid logs) Nothing --this kills the cross-platform compatibility.
     installHandler sigTERM (Catch $ Handlers.handleExit tid logs) Nothing
     let hs = [Handlers.handleMessages, Handlers.handlePresences]
-    ss <- replicateM (length hs) $ dupSession sess
-    as <- mapM async $ zipWith (\h s -> h $ bd {Common.session=s}) hs ss
+    ss <- replicateM (length hs - 1) $ dupSession sess -- length-1 because we're using the original session
+    as <- mapM async $ zipWith (\h s -> h $ bd {Common.session=s}) hs (sess : ss)
     forM_ as wait
    ) `finally` (do
     Logs.saveLogs logs

@@ -119,4 +119,4 @@ handlePresences bd@BotData{session=sess} = forever $ do
 handleExit :: ThreadId -> Logs -> IO ()
 handleExit tid logs = do
   putStrLn "Interrupt detected, exiting..."
-  E.throwTo tid (ExitSuccess)
+  E.throwTo tid (ExitSuccess) --exit code in main code
