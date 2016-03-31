@@ -56,7 +56,7 @@ usersFile :: IO FilePath
 usersFile = fmap (</> "users.dat") Config.appDir
 
 --internal only
-getUserM j us = Map.findWithDefault (User { jid = Xmpp.toBare j, alias = unpack $ fromMaybe "" (Xmpp.localpart j), multicast = True }) (Xmpp.toBare j) us  
+getUserM j us = Map.findWithDefault (User { jid = Xmpp.toBare j, alias = take 2 . unpack $ fromMaybe "" (Xmpp.localpart j), multicast = True }) (Xmpp.toBare j) us  
 
 getUser :: Xmpp.Jid -> Users -> IO User
 getUser j usT = atomically $ do
