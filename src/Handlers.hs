@@ -91,7 +91,16 @@ handleMessages bd@BotData {session=sess, users=us, logs=ls, botJid=bj} = forever
             u <- Users.getUser sender us
             let u' = u {Users.squelchList = j : Users.squelchList u}
             Users.setUser u' us
-            sendMessageTo sender bd $ [XmlUtils.italicsText "You have squelched ", XmlUtils.boldText rawJid, XmlUtils.italicsText "."]
+            sendMessageTo sender bd $ [XmlUtils.italicsText "You have squelched ", XmlUtils.boldText rawJid, XmlUtils.italicsText $ ". Current squelch list: " ++ (show $ fmap (Text.unpack . jidToText) (Users.squelchList u'))]
+          Nothing -> do
+            sendMessageTo sender bd $ [XmlUtils.italicsText "Invalid JID entered."]
+      Right (Unsquelch rawJid) -> do
+        case jidFromText (Text.pack rawJid) of
+          Just j -> do
+            u <- Users.getUser sender us
+            let u' = u {Users.squelchList = List.delete j $ Users.squelchList u}
+            Users.setUser u' us
+            sendMessageTo sender bd $ [XmlUtils.italicsText "You have unsquelched ", XmlUtils.boldText rawJid, XmlUtils.italicsText $ ". Current squelch list: " ++ (show $ fmap (Text.unpack . jidToText) (Users.squelchList u'))]
           Nothing -> do
             sendMessageTo sender bd $ [XmlUtils.italicsText "Invalid JID entered."]
 
@@ -106,8 +115,9 @@ handleMessages bd@BotData {session=sess, users=us, logs=ls, botJid=bj} = forever
        <|> (string "roll" >> takeWhile isSpace >> decimal >>= \d1 -> string "d" >> decimal >>= \d2 -> return $ Roll (min 100 d1) (min 10000 d2))
        <|> (string "multicast" >> return Multicast)
        <|> (string "squelch" >> takeWhile isSpace >> takeWhile (const True) >>= return . Squelch . Text.unpack)
+       <|> (string "unsquelch" >> takeWhile isSpace >> takeWhile (const True) >>= return . Unsquelch . Text.unpack)
       
-data BotCommand = GetLogs Int | Help | Ping | Alias String | List | Roll Int Int | Multicast | Squelch String
+data BotCommand = GetLogs Int | Help | Ping | Alias String | List | Roll Int Int | Multicast | Squelch String | Unsquelch String
   
 --The presence handler takes in presences and looks for subscription requests. Upon finding one, it subscribes them back
 --and adds them to the roster.
