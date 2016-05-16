@@ -61,14 +61,14 @@ handleMessages bd@BotData {session=sess, users=us, logs=ls, botJid=bj} = forever
         sendMessageTo sender bd $ List.intercalate [XmlUtils.newline] $ [XmlUtils.boldText "Last logs:"] : lastLogs
       Right Ping -> sendMessageTo sender bd $ [XmlUtils.italicsText "PONG!"] 
       Right (Alias a) -> do
-        if length a > 0 && length a <= 2
+        if length a > 0 && length a <= 20
           then do
             u <- Users.getUser sender us
             let oldAlias = Users.alias u
             let u' = u {Users.alias = a}
             Users.setUser u' us
             sendMessageToAll bd $ [XmlUtils.italicsNode [XmlUtils.boldText oldAlias, XmlUtils.text " is now known as ", XmlUtils.boldText a, XmlUtils.text "."]]
-          else sendMessageTo sender bd $ [XmlUtils.italicsText "Error: You must enter an alias between 1-2 characters, eg. !alias fl."]
+          else sendMessageTo sender bd $ [XmlUtils.italicsText "Error: You must enter an alias between 1-20 characters, eg. !alias fel."]
       Right (List) -> do
         ps <- atomically $ getAvailablePeers sess
         ls <- forM (filter (/=bj) ps) (\j -> do
