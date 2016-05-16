@@ -40,7 +40,8 @@ handleMessages bd@BotData {session=sess, users=us, logs=ls, botJid=bj} = forever
   let (Just !sender) = messageFrom msg
   let (Just !payload) = fmap (fmap $ XmlUtils.mapNodeText filterText) $ XmlUtils.unwrapMessage (messagePayload msg)
   let !s = XmlUtils.nodesToString payload
-  !alias <- fmap Users.alias $ Users.getUser sender us
+  u <- Users.getUser sender us
+  let alias = Users.alias u
   let !broadcastMsg = XmlUtils.boldText alias : XmlUtils.text ": " : payload
 
   --putStrLn (show payload)
@@ -48,7 +49,7 @@ handleMessages bd@BotData {session=sess, users=us, logs=ls, botJid=bj} = forever
   --Check if command
   if head s == '!'
     then parseCommand s sender
-    else sendMessageToAllBut [sender] bd broadcastMsg
+    else sendMessageToAllBut (sender : Users.squelchList u) bd broadcastMsg
 
   where 
     parseCommand :: String -> Jid -> IO ()
@@ -84,7 +85,16 @@ handleMessages bd@BotData {session=sess, users=us, logs=ls, botJid=bj} = forever
         let u' = u {Users.multicast = m}
         Users.setUser u' us
         sendMessageTo sender bd $ [XmlUtils.italicsText "Your multicast is now toggled to ", XmlUtils.boldText (show m), XmlUtils.italicsText "."]
- 
+      Right (Squelch rawJid) -> do
+        case jidFromText (Text.pack rawJid) of
+          Just j -> do
+            u <- Users.getUser sender us
+            let u' = u {Users.squelchList = j : Users.squelchList u}
+            Users.setUser u' us
+            sendMessageTo sender bd $ [XmlUtils.italicsText "You have squelched ", XmlUtils.boldText rawJid, XmlUtils.italicsText "."]
+          Nothing -> do
+            sendMessageTo sender bd $ [XmlUtils.italicsText "Invalid JID entered."]
+
     parser :: Parser BotCommand
     parser = do
       char '!'
@@ -95,8 +105,9 @@ handleMessages bd@BotData {session=sess, users=us, logs=ls, botJid=bj} = forever
        <|> (string "list" >> return List)
        <|> (string "roll" >> takeWhile isSpace >> decimal >>= \d1 -> string "d" >> decimal >>= \d2 -> return $ Roll (min 100 d1) (min 10000 d2))
        <|> (string "multicast" >> return Multicast)
+       <|> (string "squelch" >> takeWhile isSpace >> takeWhile (const True) >>= return . Squelch . Text.unpack)
       
-data BotCommand = GetLogs Int | Help | Ping | Alias String | List | Roll Int Int | Multicast
+data BotCommand = GetLogs Int | Help | Ping | Alias String | List | Roll Int Int | Multicast | Squelch String
   
 --The presence handler takes in presences and looks for subscription requests. Upon finding one, it subscribes them back
 --and adds them to the roster.
