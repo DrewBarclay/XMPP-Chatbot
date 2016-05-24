@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Users (
   User(..), 
@@ -10,9 +11,11 @@ module Users (
   setUser
 ) where
 
+import Prelude hiding (readFile)
 import qualified Network.Xmpp as Xmpp
 import qualified Data.Map.Strict as Map
-import System.IO
+import System.IO(hClose, openFile, IOMode(WriteMode))
+import Data.ByteString.Lazy(hPut, readFile)
 import System.FilePath
 import System.Directory
 import qualified Config
@@ -22,15 +25,19 @@ import Data.Text (unpack)
 import Control.Concurrent.STM
 import Text.Read (readMaybe)
 import Control.DeepSeq
+import Data.Binary
+import GHC.Generics(Generic)
+import Instances
   
 data User = User { jid :: Xmpp.Jid,
                    alias :: String,
                    multicast :: Bool,
                    squelchList :: [Xmpp.Jid]
-                 } deriving (Show, Read)
+                 } deriving (Show, Read, Generic)
+
+instance Binary User
 
 type Users = TVar (Map.Map Xmpp.Jid User)
-
 
 saveUsers :: Users -> IO ()
 saveUsers usT = do
@@ -38,7 +45,7 @@ saveUsers usT = do
   fp <- usersFile
   createDirectoryIfMissing True dir
   h <- openFile fp WriteMode
-  readTVarIO usT >>= hPutStr h . show
+  readTVarIO usT >>= hPut h . encode
   hClose h
 
 getUsers :: IO Users
@@ -47,10 +54,10 @@ getUsers = do
   exists <- doesFileExist fp
   case exists of
     True -> do
-      !parsedUsers <- fmap readMaybe $ readFile fp
+      !parsedUsers <- fmap decodeOrFail $ readFile fp
       case parsedUsers of
-        Just !us -> newTVarIO us
-        Nothing -> newTVarIO Map.empty
+        Right !(_, _, us) -> newTVarIO us
+        Left _ -> newTVarIO Map.empty
     False -> newTVarIO Map.empty
 
 usersFile :: IO FilePath

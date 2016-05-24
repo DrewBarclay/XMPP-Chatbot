@@ -1,5 +1,6 @@
 module Common (
   BotData(..),
+  sendSquelchableMessageToAllFrom,
   sendMessageToAllBut,
   sendMessageToAll,
   sendMessageTo
@@ -35,6 +36,15 @@ sendMessageToAllBut js (BotData {session=sess, logs=ls, botJid=bj, users=us}) ms
   let ps = concat $ fmap M.keys psWithStatus
   forM (filter (\j -> not $ elem (toBare j) js') ps) (\j -> sendMessage (xmppMsg {messageTo = Just j}) sess)
   log msg ls
+
+sendSquelchableMessageToAllFrom :: Jid -> BotData -> [Node] -> IO ()
+sendSquelchableMessageToAllFrom sender bd@(BotData {session=sess, logs=ls, botJid=bj, users=us}) msg = do
+  ps <- atomically $ getAvailablePeers sess
+  squelchers <- flip filterM ps (\j -> do
+    u <- getUser j us
+    return $ toBare sender `elem` squelchList u --Most people have 1-2 squelched people max, no point optimizing this too much
+   )
+  sendMessageToAllBut (sender : squelchers) bd msg
 
 sendMessageTo :: Jid -> BotData -> [Node] -> IO ()
 sendMessageTo sendee (BotData {session=sess}) msg = do

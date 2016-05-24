@@ -49,7 +49,7 @@ handleMessages bd@BotData {session=sess, users=us, logs=ls, botJid=bj} = forever
   --Check if command
   if head s == '!'
     then parseCommand s sender
-    else sendMessageToAllBut (sender : Users.squelchList u) bd broadcastMsg
+    else sendSquelchableMessageToAllFrom sender bd broadcastMsg
 
   where 
     parseCommand :: String -> Jid -> IO ()

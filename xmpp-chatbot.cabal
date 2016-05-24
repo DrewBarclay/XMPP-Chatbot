@@ -33,7 +33,9 @@ executable xmpp-chatbot
                        attoparsec,
                        stm,
                        unix,
-                       async
+                       async,
+                       binary,
+                       bytestring
                         
   default-language:    Haskell2010
 
