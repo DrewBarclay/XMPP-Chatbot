@@ -3,6 +3,7 @@
 module XmlUtils (
   unwrapMessage,
   wrapMessage,
+  messageLength,
   boldNode,
   boldText,
   italicsNode,
@@ -19,6 +20,7 @@ module XmlUtils (
 
 import Data.XML.Types
 import Data.Text (unpack, pack, intercalate, toLower, Text, replace, splitOn)
+import qualified Data.Text as Text
 import Prelude hiding (intercalate)
 import qualified Data.List as L (intercalate)
 import Data.Text.Lazy.Builder (fromText, toLazyText)
@@ -60,6 +62,13 @@ wrapMessage ns = [body, htmlBody]
   where 
     body = Element {elementName = "body", elementAttributes = [], elementNodes = [NodeContent . ContentText . toStrict . toLazyText $ nodesToText ns]}
     htmlBody = Element {elementName = "{http://jabber.org/protocol/xhtml-im}html", elementAttributes = [], elementNodes = [NodeElement $ Element {elementName = "{http://www.w3.org/1999/xhtml}body", elementAttributes = [], elementNodes=ns}]}
+
+messageLength :: [Node] -> Int
+messageLength = sum . fmap nodeTextLength
+  where
+    nodeTextLength (NodeElement e) = messageLength (elementNodes e)
+    nodeTextLength (NodeContent (ContentText t)) = Text.length t
+    nodeTextLength _ = 0
 
 nodeToText (NodeElement e) = nodesToText $ elementNodes e
 nodeToText (NodeContent (ContentText t)) = fromText t

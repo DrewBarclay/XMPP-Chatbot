@@ -30,6 +30,7 @@ import Control.Concurrent
 import qualified Control.Exception as E
 import System.Posix.Signals
 import System.Exit
+import qualified Config
 
 --The message handler takes in messages and broadcasts them to everyone on the roster.
 handleMessages :: BotData -> IO ()
@@ -43,13 +44,16 @@ handleMessages bd@BotData {session=sess, users=us, logs=ls, botJid=bj} = forever
   u <- Users.getUser sender us
   let alias = Users.alias u
   let !broadcastMsg = XmlUtils.boldText alias : XmlUtils.text ": " : payload
+  let msgLength = XmlUtils.messageLength payload
 
   --putStrLn (show payload)
 
   --Check if command
   if head s == '!'
     then parseCommand s sender
-    else sendSquelchableMessageToAllFrom sender bd broadcastMsg
+    else if msgLength <= Config.messageCharacterLimit
+      then sendSquelchableMessageToAllFrom sender bd broadcastMsg
+      else sendMessageTo sender bd $ [XmlUtils.italicsText $ "Error: Message too long by " ++ show (msgLength - Config.messageCharacterLimit) ++ " characters."]
 
   where 
     parseCommand :: String -> Jid -> IO ()

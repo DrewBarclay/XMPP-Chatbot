@@ -1,7 +1,8 @@
 module Config (
   maxLoggedLines, 
   appName,
-  appDir
+  appDir,
+  messageCharacterLimit
 ) where
 
 import System.IO
@@ -16,3 +17,6 @@ appName = "hsxmppchatbot"
 
 appDir :: IO FilePath --I wish this wasn't an IO thing.
 appDir = getAppUserDataDirectory appName
+
+messageCharacterLimit :: Int
+messageCharacterLimit = 3000
