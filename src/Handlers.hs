@@ -71,7 +71,7 @@ handleMessages bd@BotData {session=sess, users=us, logs=ls, botJid=bj} = forever
             let oldAlias = Users.alias u
             let u' = u {Users.alias = a}
             Users.setUser u' us
-            sendSquelchableMessageToAllFrom sender bd $ [XmlUtils.italicsNode [XmlUtils.boldText oldAlias, XmlUtils.text " is now known as ", XmlUtils.boldText a, XmlUtils.text "."]]
+            sendSquelchableMessageToAll sender bd $ [XmlUtils.italicsNode [XmlUtils.boldText oldAlias, XmlUtils.text " is now known as ", XmlUtils.boldText a, XmlUtils.text "."]]
           else sendMessageTo sender bd $ [XmlUtils.italicsText "Error: You must enter an alias between 1-20 characters, eg. !alias fel."]
       Right (List) -> do
         ps <- atomically $ getAvailablePeers sess
@@ -82,7 +82,7 @@ handleMessages bd@BotData {session=sess, users=us, logs=ls, botJid=bj} = forever
       Right (Roll numDice numSides) -> do     
         rolls <- replicateM numDice $ randomRIO (1, numSides)
         alias <- fmap Users.alias $ Users.getUser sender us
-        sendSquelchableMessageToAllFrom sender bd $ [XmlUtils.italicsNode [XmlUtils.boldText alias, XmlUtils.text (" rolls " ++ show numDice ++ "d" ++ show numSides ++ ". "), XmlUtils.boldText "Result: ", XmlUtils.text (show rolls)]]
+        sendSquelchableMessageToAll sender bd $ [XmlUtils.italicsNode [XmlUtils.boldText alias, XmlUtils.text (" rolls " ++ show numDice ++ "d" ++ show numSides ++ ". "), XmlUtils.boldText "Result: ", XmlUtils.text (show rolls)]]
       Right (Multicast) -> do
         u <- Users.getUser sender us
         let m = not $ Users.multicast u

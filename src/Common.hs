@@ -1,6 +1,8 @@
 module Common (
   BotData(..),
+  sendSquelchableMessageToAllButFrom,
   sendSquelchableMessageToAllFrom,
+  sendSquelchableMessageToAll,
   sendMessageToAllBut,
   sendMessageToAll,
   sendMessageTo
@@ -37,14 +39,21 @@ sendMessageToAllBut js (BotData {session=sess, logs=ls, botJid=bj, users=us}) ms
   forM (filter (\j -> not $ elem (toBare j) js') ps) (\j -> sendMessage (xmppMsg {messageTo = Just j}) sess)
   log msg ls
 
+--Sends a message to everyone except anyone who squelched the given jid
+sendSquelchableMessageToAll :: Jid -> BotData -> [Node] -> IO ()
+sendSquelchableMessageToAll = sendSquelchableMessageToAllButFrom []
+
+--Sends a message to everyone but the sender and the people who have the sender squelched
 sendSquelchableMessageToAllFrom :: Jid -> BotData -> [Node] -> IO ()
-sendSquelchableMessageToAllFrom sender bd@(BotData {session=sess, logs=ls, botJid=bj, users=us}) msg = do
+sendSquelchableMessageToAllFrom sender bd msg = sendSquelchableMessageToAllButFrom [sender] sender bd msg
+
+sendSquelchableMessageToAllButFrom buts sender bd@(BotData {session=sess, logs=ls, botJid=bj, users=us}) msg = do
   ps <- atomically $ getAvailablePeers sess
   squelchers <- flip filterM ps (\j -> do
     u <- getUser j us
     return $ toBare sender `elem` squelchList u --Most people have 1-2 squelched people max, no point optimizing this too much
    )
-  sendMessageToAllBut (sender : squelchers) bd msg
+  sendMessageToAllBut (buts ++ squelchers) bd msg
 
 sendMessageTo :: Jid -> BotData -> [Node] -> IO ()
 sendMessageTo sendee (BotData {session=sess}) msg = do
