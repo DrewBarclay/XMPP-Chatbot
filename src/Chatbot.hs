@@ -36,8 +36,7 @@ main = do
   --connect to the XMPP server
   result <- session
                domain
-                (Just (\_ -> ( [scramSha1 (pack username) Nothing (pack password)])
-                             , Nothing))
+                (simpleAuth (pack username) (pack password))
                 (def & tlsUseNameIndicationL .~ True
                  & osc .~ (\_ _ _ _ -> return []))
   sess <- case result of
